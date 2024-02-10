@@ -11,15 +11,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SkiersClient {
-  static final String basePath = "http://18.246.208.30:8080/server";
+  static final String basePath = "http://35.166.57.252:8080/server";
 
   static final int REQUESTS_COUNT_PER_THREAD = 1000;
-  private static final int ORIGINAL_THREAD_COUNT = 32;
-  static final int NEW_THREAD_COUNT = 118;
+  private static final int INITIAL_THREAD_COUNT = 32;
+  static final int NEW_THREAD_COUNT = 100;
   static final int TOTAL_REQUEST_COUNT = 200000;
   static final int RETRIES = 5;
   static AtomicInteger unsuccessfulPostRequests = new AtomicInteger();
-  static ExecutorService originalPostPool;
+  static ExecutorService initialThreadPool;
   static ExecutorService newlyCreatedPool;
   static BlockingQueue<LiftDataGenerator> liftRideQueue;
   static int perThread;
@@ -31,42 +31,40 @@ public class SkiersClient {
   public static void main(String[] args) throws ApiException, InterruptedException, IOException {
     long startTime = System.currentTimeMillis();
 
-    completion = new CountDownLatch(1);
-    for (int i=0; i<ORIGINAL_THREAD_COUNT+NEW_THREAD_COUNT; i++) {
-      metrics.add(new LinkedList<>());
-    }
-
     // a thread for liftRide generator
     liftRideQueue = new LinkedBlockingQueue<>();
     Thread liftGeneratorThread = new Thread(new LiftRideGeneratorThread(liftRideQueue));
     liftGeneratorThread.start();
-    int threadId = 0;
+
+    completion = new CountDownLatch(1);
+    for (int i=0; i<INITIAL_THREAD_COUNT+NEW_THREAD_COUNT; i++) {
+      metrics.add(new LinkedList<>());
+    }
+
 
     // create a fixed pool for 32 threads & a cached pool for newly created threads
-    originalPostPool = Executors.newFixedThreadPool(ORIGINAL_THREAD_COUNT);
+    initialThreadPool = Executors.newFixedThreadPool(INITIAL_THREAD_COUNT);
     newlyCreatedPool = Executors.newCachedThreadPool();
 
 
     // create 32 initial consume threads
-    for (int i = 0; i < ORIGINAL_THREAD_COUNT; i++) {
-      originalPostPool.submit(new SinglePostRequestThread(REQUESTS_COUNT_PER_THREAD, threadId));
-      threadId++;
+    for (int i = 0; i < INITIAL_THREAD_COUNT; i++) {
+      initialThreadPool.submit(new SinglePostRequestThread(REQUESTS_COUNT_PER_THREAD, i));
     }
 
     // wait for any thread finish its 1000 requests
     completion.await();
-    perThread = (TOTAL_REQUEST_COUNT - ORIGINAL_THREAD_COUNT * REQUESTS_COUNT_PER_THREAD) / NEW_THREAD_COUNT + 1;
+    perThread = (TOTAL_REQUEST_COUNT - INITIAL_THREAD_COUNT * REQUESTS_COUNT_PER_THREAD) / NEW_THREAD_COUNT + 5;
     for (int i = 0; i < NEW_THREAD_COUNT; i++) {
-      newlyCreatedPool.submit(new SinglePostRequestThread(perThread, threadId));
-      threadId++;
+      newlyCreatedPool.submit(new SinglePostRequestThread(perThread, INITIAL_THREAD_COUNT + i));
     }
 
     //  termination
     liftGeneratorThread.join();
-    originalPostPool.shutdown();
+    initialThreadPool.shutdown();
     newlyCreatedPool.shutdown();
-    originalPostPool.awaitTermination(300, TimeUnit.SECONDS);
-    newlyCreatedPool.awaitTermination(300, TimeUnit.SECONDS);
+    initialThreadPool.awaitTermination(8000, TimeUnit.SECONDS);
+    newlyCreatedPool.awaitTermination(8000, TimeUnit.SECONDS);
 
     // cal the time and throughput
     long endTime = System.currentTimeMillis();
@@ -77,7 +75,7 @@ public class SkiersClient {
         .mapToInt(Integer::intValue)
         .sum();
 
-    System.out.println("Number of threads used: " + (ORIGINAL_THREAD_COUNT + NEW_THREAD_COUNT));
+    System.out.println("Number of threads used: " + (INITIAL_THREAD_COUNT + NEW_THREAD_COUNT));
     System.out.println("");
     System.out.println("Number of successful requests sent: " + successfulPostRequests);
     System.out.println("Number of unsuccessful requests: " + unsuccessfulPostRequests);

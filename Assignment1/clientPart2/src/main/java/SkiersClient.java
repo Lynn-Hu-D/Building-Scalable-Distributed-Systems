@@ -19,10 +19,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import org.jetbrains.annotations.NotNull;
+
 
 public class SkiersClient {
-  static final String basePath = "http://localhost:8080/";
+  static final String basePath = "http://35.86.80.124:8080/server";
 
   static final int REQUESTS_COUNT_PER_THREAD = 1000;
   private static final int ORIGINAL_THREAD_COUNT = 32;
@@ -31,7 +31,7 @@ public class SkiersClient {
   static final int RETRIES = 5;
   static final int PERCENTILE = 99;
   static final String CSV_FILE_PATH = "requestMetrics.csv";
-  static AtomicInteger unsuccessfulPostRequests = new AtomicInteger();
+  static AtomicInteger unsuccessfulPostRequests;
   static ExecutorService originalPostPool;
   static ExecutorService newlyCreatedPool;
   static BlockingQueue<LiftDataGenerator> liftRideQueue;
@@ -44,6 +44,7 @@ public class SkiersClient {
 
   public static void main(String[] args) throws ApiException, InterruptedException, IOException {
     startTime = System.currentTimeMillis();
+    unsuccessfulPostRequests = new AtomicInteger();
 
     completion = new CountDownLatch(1);
     for (int i=0; i<ORIGINAL_THREAD_COUNT+NEW_THREAD_COUNT; i++) {
@@ -67,7 +68,7 @@ public class SkiersClient {
     }
     // wait for any thread finish its 1000 requests
     completion.await();
-    perThread = (TOTAL_REQUEST_COUNT - ORIGINAL_THREAD_COUNT * REQUESTS_COUNT_PER_THREAD) / NEW_THREAD_COUNT + 1;
+    perThread = (TOTAL_REQUEST_COUNT - ORIGINAL_THREAD_COUNT * REQUESTS_COUNT_PER_THREAD) / NEW_THREAD_COUNT + 100;
     for (int i = 0; i < NEW_THREAD_COUNT; i++) {
       newlyCreatedPool.submit(new SinglePostRequestThread(perThread, threadId));
       threadId++;
@@ -124,7 +125,7 @@ public class SkiersClient {
   }
 
 
-  private static long calMeanLatency(@NotNull List<PostMetric> metrics) {
+  private static long calMeanLatency(List<PostMetric> metrics) {
     long latencies = 0;
     for (PostMetric metric : metrics) {
       latencies += metric.getLatency();

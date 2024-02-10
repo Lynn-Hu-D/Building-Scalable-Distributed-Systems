@@ -35,7 +35,7 @@ public class SinglePostRequestThread implements Runnable {
       while (retry < SkiersClient.RETRIES) {
         retry++;
         try {
-          LiftDataGenerator liftData = SkiersClient.liftRideQueue.remove();
+          LiftDataGenerator liftData = SkiersClient.liftRideQueue.take();
           ApiResponse<Void> response = apiInstance.writeNewLiftRideWithHttpInfo(
               liftData.getLiftRide(),
               liftData.getResortID(),
@@ -55,10 +55,11 @@ public class SinglePostRequestThread implements Runnable {
             // store data fro later processing
             PostMetric metric = new PostMetric(startTime, endTime, endTime - startTime);
             SkiersClient.metrics.get(threadId).add(metric);
-
             break;
           } else {
-            SkiersClient.unsuccessfulPostRequests.incrementAndGet();
+            if (retry >= SkiersClient.RETRIES) {
+              SkiersClient.unsuccessfulPostRequests.incrementAndGet();
+            }
           }
         } catch (ApiException e) {
           // Log ApiException details
@@ -67,6 +68,8 @@ public class SinglePostRequestThread implements Runnable {
           System.err.println("  Response Body: " + e.getResponseBody());
           e.printStackTrace();
 
+          throw new RuntimeException(e);
+        } catch (InterruptedException e) {
           throw new RuntimeException(e);
         }
       }

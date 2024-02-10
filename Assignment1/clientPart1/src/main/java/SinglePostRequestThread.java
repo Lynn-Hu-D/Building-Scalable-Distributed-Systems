@@ -6,8 +6,6 @@ import io.swagger.client.api.SkiersApi;
 
 public class SinglePostRequestThread implements Runnable {
   private int requestsPerThread;
-  private long startTime;
-  private long endTime;
   private int threadId;
 
   public SinglePostRequestThread(int requestsPerThread, int threadId) {
@@ -24,6 +22,7 @@ public class SinglePostRequestThread implements Runnable {
 }
 
   private void postRequest(SkiersApi apiInstance) {
+
 
     // 1000 per thread
     for (int i = 0; i < this.requestsPerThread; i++) {
@@ -46,33 +45,28 @@ public class SinglePostRequestThread implements Runnable {
         if success-> increment successful_post_request
         fail -> retry + 1
          */
-
-          if (response.getStatusCode() == 201) {
-//            SkiersClient.successfulPostRequests.incrementAndGet();
-            endTime = System.currentTimeMillis();
+          int statusCode = response.getStatusCode();
+          if (statusCode >= 200 && statusCode < 300) {
             SkiersClient.metrics.get(threadId).add(1);
             // store data fro later processing
-
             break;
-          } else {
-            SkiersClient.unsuccessfulPostRequests.incrementAndGet();
+          } else if (statusCode >= 400 && statusCode < 600){
+            if (retry >= SkiersClient.RETRIES) {
+              SkiersClient.unsuccessfulPostRequests.incrementAndGet();
+              throw new RuntimeException("Maximum retries exceeded for status code " + statusCode);
+            }
           }
         } catch (ApiException e) {
           // Log ApiException details
-          System.err.println("ApiException occurred:");
-          System.err.println("  HTTP Status Code: " + e.getCode());
-          System.err.println("  Response Body: " + e.getResponseBody());
           e.printStackTrace();
-
-          throw new RuntimeException(e);
-        }
+          if (retry >= SkiersClient.RETRIES) {
+            SkiersClient.unsuccessfulPostRequests.incrementAndGet();
+            throw new RuntimeException("Maximum retries exceeded", e);
+          }
       }
     }
-
   }
-
-
-
+}
 }
 
 

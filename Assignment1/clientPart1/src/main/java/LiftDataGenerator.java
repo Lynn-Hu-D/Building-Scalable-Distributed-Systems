@@ -2,7 +2,7 @@ import io.swagger.client.model.LiftRide;
 import java.util.Random;
 
 public class LiftDataGenerator {
-  private static final int MAX_SKIER_ID = 100000;
+  private static final int MAX_SKIER_ID = 100;
   private static final int MAX_RESORT_ID = 10;
   private static final int MAX_LIFT_ID = 40;
   private static final String SEASON_ID = "2024";

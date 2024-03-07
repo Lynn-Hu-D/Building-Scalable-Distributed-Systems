@@ -32,10 +32,10 @@ public class SinglePostRequestThread implements Runnable {
 //      if (SkiersClient.successfulPostRequests.get() >= SkiersClient.TOTAL_REQUEST_COUNT) break;
       // retry at most 5 times
       startTime = System.currentTimeMillis();
-      while (retry < SkiersClient.RETRIES) {
+      while (retry < SkiersClient.RETRIES ) {
         retry++;
         try {
-          LiftDataGenerator liftData = SkiersClient.liftRideQueue.take();
+          LiftDataGenerator liftData = SkiersClient.liftRideQueue.remove();
           ApiResponse<Void> response = apiInstance.writeNewLiftRideWithHttpInfo(
               liftData.getLiftRide(),
               liftData.getResortID(),
@@ -47,8 +47,8 @@ public class SinglePostRequestThread implements Runnable {
         if success-> increment successful_post_request
         fail -> retry + 1
          */
-
-          if (response.getStatusCode() == 201) {
+          int statusCode = response.getStatusCode();
+          if (statusCode == 201) {
 //            SkiersClient.successfulPostRequests.incrementAndGet();
             endTime = System.currentTimeMillis();
 
@@ -56,21 +56,19 @@ public class SinglePostRequestThread implements Runnable {
             PostMetric metric = new PostMetric(startTime, endTime, endTime - startTime);
             SkiersClient.metrics.get(threadId).add(metric);
             break;
-          } else {
+          } else if (statusCode >= 400 && statusCode < 600){
             if (retry >= SkiersClient.RETRIES) {
               SkiersClient.unsuccessfulPostRequests.incrementAndGet();
+              break;
             }
           }
         } catch (ApiException e) {
           // Log ApiException details
-          System.err.println("ApiException occurred:");
-          System.err.println("  HTTP Status Code: " + e.getCode());
-          System.err.println("  Response Body: " + e.getResponseBody());
           e.printStackTrace();
-
-          throw new RuntimeException(e);
-        } catch (InterruptedException e) {
-          throw new RuntimeException(e);
+          if (retry >= SkiersClient.RETRIES) {
+            SkiersClient.unsuccessfulPostRequests.incrementAndGet();
+            throw new RuntimeException("Maximum retries exceeded", e);
+          }
         }
       }
     }

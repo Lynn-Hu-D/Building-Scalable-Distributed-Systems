@@ -22,11 +22,11 @@ import java.util.stream.Collectors;
 
 
 public class SkiersClient {
-  static final String basePath = "http://35.86.80.124:8080/server";
+  static final String basePath = "http://44.237.113.102:8080/server";
 
   static final int REQUESTS_COUNT_PER_THREAD = 1000;
   private static final int ORIGINAL_THREAD_COUNT = 32;
-  static final int NEW_THREAD_COUNT = 100;
+  static final int NEW_THREAD_COUNT = 300;
   static final int TOTAL_REQUEST_COUNT = 200000;
   static final int RETRIES = 5;
   static final int PERCENTILE = 99;
@@ -46,7 +46,6 @@ public class SkiersClient {
     startTime = System.currentTimeMillis();
     unsuccessfulPostRequests = new AtomicInteger();
 
-    completion = new CountDownLatch(1);
     for (int i=0; i<ORIGINAL_THREAD_COUNT+NEW_THREAD_COUNT; i++) {
       metrics.add(new LinkedList<>());
     }
@@ -60,6 +59,8 @@ public class SkiersClient {
     liftRideQueue = new LinkedBlockingQueue<>();
     Thread liftGeneratorThread = new Thread(new LiftRideGeneratorThread(liftRideQueue));
     liftGeneratorThread.start();
+
+    completion = new CountDownLatch(1);
     int threadId = 0;
     // create 32 initial consume threads
     for (int i = 0; i < ORIGINAL_THREAD_COUNT; i++) {
@@ -68,11 +69,12 @@ public class SkiersClient {
     }
     // wait for any thread finish its 1000 requests
     completion.await();
-    perThread = (TOTAL_REQUEST_COUNT - ORIGINAL_THREAD_COUNT * REQUESTS_COUNT_PER_THREAD) / NEW_THREAD_COUNT + 100;
+    perThread = (TOTAL_REQUEST_COUNT - ORIGINAL_THREAD_COUNT * REQUESTS_COUNT_PER_THREAD) / NEW_THREAD_COUNT + 1;
     for (int i = 0; i < NEW_THREAD_COUNT; i++) {
       newlyCreatedPool.submit(new SinglePostRequestThread(perThread, threadId));
       threadId++;
     }
+
     //  termination
     liftGeneratorThread.join();
     originalPostPool.shutdown();
@@ -88,17 +90,19 @@ public class SkiersClient {
         .flatMap(List::stream)
         .collect(Collectors.toList());
 
-
-    System.out.println("Successful Threads: " + flattenedMetrics.size());
-    System.out.println("Total time: " + wallTime + " ms");
+    System.out.println("*** Results ***" );
+    System.out.println("Phase 1 Thread count: 32");
+    System.out.println("Phase 2 Thread count: " + NEW_THREAD_COUNT);
+    System.out.println("Number of Successful requests sent: " + flattenedMetrics.size());
+    System.out.println("Total runtime: " + wallTime + " ms");
+    System.out.println("Total Throughput: " + (int) (flattenedMetrics.size() / (wallTime / 1000.0)) + " requests per second");
     System.out.println("");
+
 
     calculateMetrics(flattenedMetrics);
     writeToFile(flattenedMetrics);
-    plotThroughput(flattenedMetrics);
 
   }
-
 
   private static void calculateMetrics(List<PostMetric> metrics) {
 
@@ -115,6 +119,7 @@ public class SkiersClient {
     long[] extremes = calExtremeLatency(metrics);
     Long minResponseTime = extremes[0];
     Long maxResponseTime = extremes[1];
+
 
     System.out.println("Mean Response Time: " + meanResponseTime + " ms");
     System.out.println("Median Response Time: " + medianResponseTime + " ms");
@@ -194,28 +199,6 @@ public class SkiersClient {
 
   }
 
-  private static void plotThroughput(List<PostMetric> metrics) throws IOException {
-    List<PostMetric> sortedMetrics = sortByEndTime(metrics);
-    String plotPath = "ThroughputPlot.csv";
-
-    try (BufferedWriter writer = new BufferedWriter(new FileWriter(plotPath))) {
-      writer.append(String.format("%-75s %-25s%n", "Current Time", "Throughput"));
-
-      sortedMetrics.stream()
-          .map(metric -> {
-            long curTime = metric.getEnd();
-            double throughput = (curTime - startTime == 0) ? 0 : (sortedMetrics.indexOf(metric) + 1) / ((curTime - startTime) / 1000.0);
-            return String.format("%-75s %-25f%n", dateFormat.format(new Date(curTime)), throughput);
-          })
-          .forEach(line -> {
-            try {
-              writer.write(line);
-            } catch (IOException e) {
-              e.printStackTrace();
-            }
-          });
-    }
-  }
 
   private static List<PostMetric> sortByStartTime(List<PostMetric> metrics) {
     List<PostMetric> sortedMetrics = new ArrayList<>(metrics);
@@ -224,19 +207,6 @@ public class SkiersClient {
       public int compare(PostMetric metric1, PostMetric metric2) {
         // Compare based on starttime
         return Double.compare(metric1.getStart(), metric2.getStart());
-      }
-    };
-    Collections.sort(sortedMetrics, latencyComparator);
-    return  sortedMetrics;
-  }
-
-  private static List<PostMetric> sortByEndTime(List<PostMetric> metrics) {
-    List<PostMetric> sortedMetrics = new ArrayList<>(metrics);
-    Comparator<PostMetric> latencyComparator = new Comparator<PostMetric>() {
-      @Override
-      public int compare(PostMetric metric1, PostMetric metric2) {
-        // Compare based on endtime
-        return Double.compare(metric1.getEnd(), metric2.getEnd());
       }
     };
     Collections.sort(sortedMetrics, latencyComparator);

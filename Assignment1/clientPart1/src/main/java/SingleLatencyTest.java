@@ -4,7 +4,7 @@ import io.swagger.client.ApiResponse;
 import io.swagger.client.api.SkiersApi;
 
 public class SingleLatencyTest {
-  private static long requestCount = 10000;
+  private static long requestCount = 1000;
   public static void main(String[] args) {
     long startTime = System.currentTimeMillis();
     ApiClient client = new ApiClient().setBasePath(SkiersClient.basePath);

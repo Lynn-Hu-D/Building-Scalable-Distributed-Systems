@@ -1,0 +1,24 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="clientPart2:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/clientPart2_jar</output-path>
+    <root id="archive" name="clientPart2.jar">
+      <element id="module-output" name="clientPart1" />
+      <element id="module-output" name="swagger-java-client" />
+      <element id="extracted-dir" path="$USER_HOME$/m2/repository/org/jetbrains/kotlin/kotlin-stdlib-jdk7/1.6.20/kotlin-stdlib-jdk7-1.6.20.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/m2/repository/javax/annotation/javax.annotation-api/1.3.2/javax.annotation-api-1.3.2.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/m2/repository/com/squareup/okio/okio-jvm/3.2.0/okio-jvm-3.2.0.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/m2/repository/com/squareup/okio/okio/3.2.0/okio-3.2.0.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/m2/repository/org/jetbrains/kotlin/kotlin-stdlib-common/1.6.20/kotlin-stdlib-common-1.6.20.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/m2/repository/org/jetbrains/kotlin/kotlin-stdlib/1.6.20/kotlin-stdlib-1.6.20.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/m2/repository/org/threeten/threetenbp/1.3.5/threetenbp-1.3.5.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/m2/repository/org/jetbrains/annotations/13.0/annotations-13.0.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/m2/repository/io/swagger/core/v3/swagger-annotations/2.0.0/swagger-annotations-2.0.0.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/m2/repository/com/squareup/okio/okio/1.6.0/okio-1.6.0.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/m2/repository/com/google/code/gson/gson/2.8.1/gson-2.8.1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/m2/repository/io/gsonfire/gson-fire/1.8.3/gson-fire-1.8.3.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/m2/repository/org/jetbrains/kotlin/kotlin-stdlib-jdk8/1.6.20/kotlin-stdlib-jdk8-1.6.20.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/m2/repository/com/squareup/okhttp/okhttp/2.7.5/okhttp-2.7.5.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/m2/repository/com/squareup/okhttp/logging-interceptor/2.7.5/logging-interceptor-2.7.5.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>

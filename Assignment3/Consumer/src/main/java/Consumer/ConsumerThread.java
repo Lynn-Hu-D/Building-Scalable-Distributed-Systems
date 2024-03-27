@@ -10,6 +10,7 @@ import com.rabbitmq.client.DeliverCallback;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+
 import java.util.List;
 import java.util.Map;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -22,7 +23,7 @@ public class ConsumerThread implements Runnable {
   private Channel channel;
   private ChannelPool channelPool;
   private  final int BATCH_SIZE = 25; // DynamoDB max batch size
-  private  List<WriteRequest> batch = new ArrayList<>();
+  private List<WriteRequest> batch = new ArrayList<>();
 
   public ConsumerThread(ChannelPool channelPool) {
     this.channelPool = channelPool;

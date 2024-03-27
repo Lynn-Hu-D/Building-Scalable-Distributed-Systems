@@ -76,5 +76,14 @@ public class LiftDataGenerator {
     this.skierID = skierID;
   }
 
+  // Method to generate a unique string representation of the instance
+  public String getCombination() {
+    return "ResortID:" + resortID +
+        "_SeasonID:" + seasonID +
+        "_DayID:" + dayID +
+        "_SkierID:" + skierID +
+        "_Time:" + liftRide.getTime() +
+        "_LiftID:" + liftRide.getLiftID();
+  }
 
 }

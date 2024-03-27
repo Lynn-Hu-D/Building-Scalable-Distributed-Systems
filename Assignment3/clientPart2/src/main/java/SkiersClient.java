@@ -22,8 +22,9 @@ import java.util.stream.Collectors;
 
 public class SkiersClient {
 //  static final String basePath = "http://44.237.113.102:8080/QS100";
-//  static final String basePath = "http://localhost:8080";
-static final String basePath = "http://my-server-lb-1948541718.us-west-2.elb.amazonaws.com/QS200";
+  static final String basePath = "http://localhost:8080";
+
+//static final String basePath = "http://my-server-lb-1948541718.us-west-2.elb.amazonaws.com/QS200";
 
 
   static final int REQUESTS_COUNT_PER_THREAD = 1000;
@@ -92,7 +93,7 @@ static final String basePath = "http://my-server-lb-1948541718.us-west-2.elb.ama
         .collect(Collectors.toList());
 
     System.out.println("Number of Threads used: " + (ORIGINAL_THREAD_COUNT + NEW_THREAD_COUNT));
-    System.out.println("Successful Threads: " + flattenedMetrics.size());
+    System.out.println("Successful requests: " + flattenedMetrics.size());
     System.out.println("Total time: " + wallTime + " ms");
     System.out.println("");
 

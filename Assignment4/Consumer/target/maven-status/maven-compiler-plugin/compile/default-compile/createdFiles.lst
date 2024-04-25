@@ -1,0 +1,5 @@
+Consumer/ChannelPool.class
+Consumer/DBConnection.class
+Consumer/ConsumerThread.class
+Consumer/Config.class
+Consumer/LiftRideConsumer.class

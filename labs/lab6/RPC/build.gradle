@@ -1,0 +1,22 @@
+plugins {
+    id 'java'
+}
+
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    implementation files('amqp-client-5.16.0.jar')
+    implementation files('slf4j-api-1.7.36.jar')
+    implementation files('slf4j-simple-1.7.36.jar')
+}
+
+test {
+    useJUnitPlatform()
+}

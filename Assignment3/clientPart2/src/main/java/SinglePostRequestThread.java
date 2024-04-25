@@ -16,19 +16,20 @@ public class SinglePostRequestThread implements Runnable {
   }
 
 
-@Override
+  @Override
   public void run()  {
-    ApiClient client = new ApiClient().setBasePath(SkiersClient.basePath).setReadTimeout(30000);
+    ApiClient client = new ApiClient().setBasePath(SkiersClient.basePath);
     SkiersApi apiInstance = new SkiersApi(client);
     postRequest(apiInstance);
     SkiersClient.completion.countDown();
-}
+  }
 
 
   private void postRequest(SkiersApi apiInstance) {
     // 1000 per thread
     for (int i = 0; i < this.requestsPerThread; i++) {
       int retry = 0;
+//      if (SkiersClient.successfulPostRequests.get() >= SkiersClient.TOTAL_REQUEST_COUNT) break;
       // retry at most 5 times
       startTime = System.currentTimeMillis();
       while (retry < SkiersClient.RETRIES ) {
@@ -48,6 +49,8 @@ public class SinglePostRequestThread implements Runnable {
          */
           int statusCode = response.getStatusCode();
           if (statusCode == 201) {
+
+            System.out.println("sent");
 //            SkiersClient.successfulPostRequests.incrementAndGet();
             endTime = System.currentTimeMillis();
 
@@ -56,7 +59,7 @@ public class SinglePostRequestThread implements Runnable {
             SkiersClient.metrics.get(threadId).add(metric);
             break;
           } else if (statusCode >= 400 && statusCode < 600){
-            if (retry >= (SkiersClient.RETRIES - 1)) {
+            if (retry >= SkiersClient.RETRIES) {
               SkiersClient.unsuccessfulPostRequests.incrementAndGet();
               break;
             }
@@ -64,7 +67,7 @@ public class SinglePostRequestThread implements Runnable {
         } catch (ApiException e) {
           // Log ApiException details
           e.printStackTrace();
-          if (retry >= (SkiersClient.RETRIES - 1)) {
+          if (retry >= SkiersClient.RETRIES) {
             SkiersClient.unsuccessfulPostRequests.incrementAndGet();
             throw new RuntimeException("Maximum retries exceeded", e);
           }
@@ -73,8 +76,6 @@ public class SinglePostRequestThread implements Runnable {
     }
 
   }
-
-
 
 }
 

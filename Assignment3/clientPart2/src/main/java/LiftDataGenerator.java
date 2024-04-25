@@ -3,10 +3,13 @@ import io.swagger.client.model.LiftRide;
 
 public class LiftDataGenerator {
   private static final int MAX_SKIER_ID = 100000;
-  private static final int MAX_RESORT_ID = 10;
+  private static final int RESORT_ID = 1;
+//  private static final int MAX_RESORT_ID = 10;
   private static final int MAX_LIFT_ID = 40;
   private static final String SEASON_ID = "2024";
-  private static final String DAY_ID = "1";
+  private static final String DAY1 = "1";
+  private static final String DAY2 = "2";
+  private static final String DAY3 = "3";
   private static final int MAX_TIME = 360;
 
 
@@ -28,11 +31,15 @@ public class LiftDataGenerator {
     newRide.setLiftID(random.nextInt(MAX_LIFT_ID) + 1);
     setLiftRide(newRide);
 
-    setResortID(random.nextInt(MAX_RESORT_ID) + 1);
-    setSeasonID(SEASON_ID);
-    setDayID(DAY_ID);
-    setSkierID(random.nextInt(MAX_SKIER_ID) + 1);
+//    setResortID(random.nextInt(MAX_RESORT_ID) + 1);
 
+    // keep the resort and season constant
+    setResortID(RESORT_ID);
+    setSeasonID(SEASON_ID);
+
+    // day will be 1, 2, 3
+    setDayID(DAY3);
+    setSkierID(random.nextInt(MAX_SKIER_ID) + 1);
   }
 
 
@@ -76,14 +83,5 @@ public class LiftDataGenerator {
     this.skierID = skierID;
   }
 
-  // Method to generate a unique string representation of the instance
-  public String getCombination() {
-    return "ResortID:" + resortID +
-        "_SeasonID:" + seasonID +
-        "_DayID:" + dayID +
-        "_SkierID:" + skierID +
-        "_Time:" + liftRide.getTime() +
-        "_LiftID:" + liftRide.getLiftID();
-  }
 
 }

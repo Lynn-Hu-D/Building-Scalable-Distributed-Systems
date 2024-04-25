@@ -9,7 +9,7 @@
   <version>1.0-SNAPSHOT</version>
 
   <build>
-    <finalName>Consumer6-4</finalName> <!-- Custom name for your JAR -->
+    <finalName>Consumer64</finalName> <!-- Custom name for your JAR -->
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

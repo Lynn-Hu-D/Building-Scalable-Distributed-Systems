@@ -13,9 +13,13 @@ import java.util.HashMap;
 
 import java.util.List;
 import java.util.Map;
+import software.amazon.awssdk.services.dynamodb.endpoints.internal.Value.Int;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.BatchWriteItemRequest;
+
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.WriteRequest;
 
 
@@ -31,6 +35,7 @@ public class ConsumerThread implements Runnable {
 
   @Override
   public void run() {
+    System.out.println("consuer starts/.....");
     try {
       channel = this.channelPool.borrowChannel();
       channel.queueDeclare(QUEUE_NAME, false, false, false, null);
@@ -39,16 +44,18 @@ public class ConsumerThread implements Runnable {
       DeliverCallback deliverCallback = (consumerTag, delivery) -> {
         String message = new String(delivery.getBody(), "UTF-8");
         // Process the message (update HashMap)
+        System.out.println("start process message..........");
         processMessage(message);
       };
-
       channel.basicConsume(QUEUE_NAME, true, deliverCallback, consumerTag -> {});
     } catch( IOException e) {
     throw new RuntimeException(e);
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     } finally {
+      System.out.println("go into finally  " + batch.size());
       if (!batch.isEmpty()) {
+        System.out.println("flush the final batch.....  ");
         flushBatch();
       }
       try {
@@ -59,10 +66,11 @@ public class ConsumerThread implements Runnable {
         throw new RuntimeException(e);
       }
     }
+
+    System.out.println("finish working/.....");
   }
-
   private void processMessage(String message) {
-
+    System.out.println(" process..........");
     // Parse the message and update the skierRidesMap
     String[] parts = message.split(",");
     if (parts.length == 6) {
@@ -73,21 +81,91 @@ public class ConsumerThread implements Runnable {
       int time = Integer.parseInt(parts[4]); // time
       int liftId = Integer.parseInt(parts[5]); // liftId
 
+      int vertical = liftId * 10; // vertical
+
       // Composite keys
-      String skierSeasonId = skierId + "#" + seasonId;
-      String dayLiftTime = dayId + "#" + liftId + "#" + time;
-      String daySkierId= dayId + "#" + skierId;
-
+      String resortSeasonDayLiftId = resortId + "#" + seasonId + "#" + dayId +"#" + liftId;
       Map<String, AttributeValue> item = new HashMap<>();
-      item.put("SkierSeasonId", AttributeValue.builder().s(skierSeasonId).build());
-      item.put("DayLiftTime", AttributeValue.builder().s(dayLiftTime).build());
-      item.put("ResortId", AttributeValue.builder().n(String.valueOf(resortId)).build());
-      item.put("DaySkier", AttributeValue.builder().s(daySkierId).build());
+      item.put("ResortSeasonDayLiftId", AttributeValue.builder().s(resortSeasonDayLiftId).build());
+      item.put("SkierId", AttributeValue.builder().n(String.valueOf(skierId)).build());
+      item.put("Vertical", AttributeValue.builder().n(String.valueOf(vertical)).build());
+      item.put("Time", AttributeValue.builder().n(String.valueOf(time)).build());
 
-      addToBatch(item);
-      System.out.println("item is successfully added");
+      System.out.println("start updating ....");
+
+      // update uniqueSkiers
+      update(resortId + "#" + seasonId + "#" + dayId, -1, "ADD UniqueSkiers :val", 1);
+      System.out.println("uniqueskiers success");
+
+      // update total vertical
+      // 1#2024 skierID totalVertical ->  get the total vertical for the skier for specified seasons at the specified resort
+      if(!update(resortId + "#" + seasonId, skierId, "ADD TotalVertical :val", vertical)){
+        writeTotalVertical(resortId+"#"+seasonId, skierId, vertical, "TotalVertical");
+        System.out.println("totalvertical success");
+      }
+
+      // update day vertical
+      if(!update(resortId + "#" + seasonId + "#" + dayId, skierId, "ADD DayVertical :val", vertical)){
+        writeTotalVertical(resortId + "#" + seasonId + "#" + dayId, skierId, vertical, "DayVertical");
+        System.out.println("dayvertical success");
+      }
+
+      // update vertical
+      // 1#2024#1 skierId Vertical -> get the total vertical for the skier for the specified ski day
+      if (!update(resortSeasonDayLiftId, skierId, "ADD Vertical :val", vertical)) {
+        addToBatch(item);
+        System.out.println("item is successfully added");
+      }
+
     }
   }
+
+  private void writeTotalVertical(String resortSeasonDayLiftId, int skierId, int vertical, String attributeName) {
+    Map<String, AttributeValue> item = new HashMap<>();
+    item.put("ResortSeasonDayLiftId", AttributeValue.builder().s(resortSeasonDayLiftId).build());
+    item.put("SkierId", AttributeValue.builder().n(String.valueOf(skierId)).build());
+    item.put(attributeName, AttributeValue.builder().n(String.valueOf(vertical)).build());
+
+    System.out.println("////");
+    PutItemRequest putItemRequest = PutItemRequest.builder()
+        .tableName(TABLE_NAME) // The name of the table
+        .item(item)
+        .build();
+    dynamoDbClient.putItem(putItemRequest);
+
+    System.out.println(".....");
+  }
+
+
+  private boolean update(String partitionKey, int sortKey, String expression, int val) {
+    Map<String, AttributeValue> key = new HashMap<>();
+    key.put("ResortSeasonDayLiftId", AttributeValue.builder().s(partitionKey).build());
+    key.put("SkierId", AttributeValue.builder().n(String.valueOf(sortKey)).build());
+
+    System.out.println("1111");
+
+    Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
+    expressionAttributeValues.put(":val", AttributeValue.builder().n(String.valueOf(val)).build());
+
+    System.out.println("2222");
+    UpdateItemRequest updateItemRequest = UpdateItemRequest.builder()
+        .tableName(TABLE_NAME) // Replace with your table name
+        .key(key)
+        .updateExpression(expression)
+        .expressionAttributeValues(expressionAttributeValues)
+        .conditionExpression("attribute_exists(ResortSeasonDayLiftId) and attribute_exists(SkierId)")
+        .build();
+    System.out.println("33333");
+// Execute the update
+    try {
+      dynamoDbClient.updateItem(updateItemRequest);
+      System.out.println("updated successfully.");
+      return true;
+    } catch (DynamoDbException e) {
+      return false;
+    }
+  }
+
 
   private synchronized void addToBatch(Map<String, AttributeValue> item) {
     batch.add(WriteRequest.builder().putRequest(builder -> builder.item(item)).build());
@@ -143,41 +221,4 @@ public class ConsumerThread implements Runnable {
     batch.clear(); // Clear the initial batch after all attempts
   }
 
-
-//  private void flushBatch() {
-//    if (!batch.isEmpty()) {
-//      final int MAX_RETRIES = 5;
-//      int retryCount = 0;
-//      BatchWriteItemRequest batchWriteItemRequest = BatchWriteItemRequest.builder()
-//          .requestItems(Map.of(TABLE_NAME, new ArrayList<>(batch)))
-//          .build();
-//      Map<String, List<WriteRequest>> unprocessedItems = null;
-//
-//      do {
-//        try {
-//          var response = retryCount == 0 ? dynamoDbClient.batchWriteItem(batchWriteItemRequest) :
-//              dynamoDbClient.batchWriteItem(BatchWriteItemRequest.builder().requestItems(unprocessedItems).build());
-//          unprocessedItems = response.unprocessedItems();
-//
-//          if (!unprocessedItems.isEmpty()) {
-//            retryCount++;
-//            // Exponential backoff
-//            Thread.sleep((long) (Math.pow(2, retryCount) * 100L));
-//          } else {
-//            System.out.println("Successfully wrote batch to table " + TABLE_NAME);
-//            return;
-//          }
-//        } catch (DynamoDbException | InterruptedException e) {
-//          System.err.println("Error during batch write, retry " + retryCount + ": " + e.getMessage());
-//          retryCount++;
-//          // Handle InterruptedException for the sleep method
-//          Thread.currentThread().interrupt();
-//        }
-//      } while (retryCount <= MAX_RETRIES);
-//
-//      // Handle the case where retries exceeded the maximum allowed attempts
-//      System.err.println("Failed to write batch after " + MAX_RETRIES + " retries. Consider further actions like logging or moving to a dead-letter queue.");
-//    }
-//      batch.clear();
-//    }
 }
